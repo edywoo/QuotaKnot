@@ -83,30 +83,36 @@ struct QuotaPanelView: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Label(model.copy.languageLabel, systemImage: "globe")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.quotaPrimaryText)
+                Image(systemName: "globe")
+                    .foregroundColor(.quotaCyan)
+
+                Text(model.copy.languageLabel)
+                    .foregroundColor(.white)
 
                 Spacer(minLength: 12)
 
                 Text(model.language.nativeName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.quotaSecondaryText)
+                    .foregroundColor(.white.opacity(0.78))
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.quotaSecondaryText)
+                    .foregroundColor(.white.opacity(0.65))
             }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(.white)
             .padding(.horizontal, 13)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
-            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+            .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9))
             .overlay {
                 RoundedRectangle(cornerRadius: 9)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
             }
         }
         .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .foregroundColor(.white)
+        .tint(.white)
         .frame(maxWidth: .infinity)
         .help(model.copy.languageLabel)
     }
