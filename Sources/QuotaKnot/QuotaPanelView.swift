@@ -89,14 +89,14 @@ struct QuotaPanelView: View {
                 Text(model.copy.languageLabel)
                     .foregroundColor(.white)
 
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white.opacity(0.65))
+
                 Spacer(minLength: 12)
 
                 Text(model.language.nativeName)
                     .foregroundColor(.white.opacity(0.78))
-
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white.opacity(0.65))
             }
             .font(.system(size: 12, weight: .semibold))
             .foregroundColor(.white)
