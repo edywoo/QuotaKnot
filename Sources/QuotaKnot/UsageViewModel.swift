@@ -1,24 +1,37 @@
 import AppKit
-import QuotaKnotCore
 import Foundation
+import QuotaKnotCore
 
 @MainActor
 final class UsageViewModel: ObservableObject {
     @Published private(set) var snapshot: UsageSnapshot?
     @Published private(set) var now = Date()
     @Published private(set) var lastUpdatedAt: Date?
-    @Published private(set) var lastRefreshReason: String?
-    @Published private(set) var errorMessage: String?
+    @Published private(set) var lastRefreshReason: RefreshReason?
+    @Published private(set) var presentedError: PresentedError?
     @Published private(set) var isRefreshing = false
+    @Published var language: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: Self.languageKey)
+        }
+    }
 
     private let client = CodexUsageClient()
     private var countdownTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var activityMonitor: CodexSessionActivityMonitor?
-    private var pendingRefreshReason: String?
+    private var pendingRefreshReason: RefreshReason?
     private let cacheKey = "lastUsageSnapshot"
+    private static let languageKey = "appLanguage"
 
     init() {
+        if let storedLanguage = UserDefaults.standard.string(forKey: Self.languageKey),
+           let language = AppLanguage(rawValue: storedLanguage) {
+            self.language = language
+        } else {
+            language = .preferred()
+        }
+
         loadCachedSnapshot()
         countdownTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
@@ -31,13 +44,13 @@ final class UsageViewModel: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
                 guard !Task.isCancelled else { return }
-                await self?.refresh(reason: "1분 주기")
+                await self?.refresh(reason: .scheduled)
             }
         }
         activityMonitor = CodexSessionActivityMonitor { [weak self] activity in
-            let reason = switch activity {
-            case .questionSent: "질문 전송"
-            case .responseCompleted: "응답 완료"
+            let reason: RefreshReason = switch activity {
+            case .questionSent: .questionSent
+            case .responseCompleted: .responseCompleted
             }
             Task { @MainActor [weak self] in
                 await self?.refresh(reason: reason)
@@ -45,7 +58,7 @@ final class UsageViewModel: ObservableObject {
         }
         activityMonitor?.start()
         Task {
-            await refresh(reason: "앱 시작")
+            await refresh(reason: .appLaunch)
         }
     }
 
@@ -55,45 +68,53 @@ final class UsageViewModel: ObservableObject {
         activityMonitor?.stop()
     }
 
+    var copy: LocalizedCopy {
+        LocalizedCopy(language: language)
+    }
+
     var menuBarText: String {
         guard let snapshot else {
-            return isRefreshing ? "코덱스 한도 불러오는 중…" : "코덱스 한도 확인 필요"
+            return isRefreshing ? copy.refreshing : copy.waitingForUsage
         }
 
-        let weeklyRemaining = snapshot.weeklyResetsAt.map {
-            RemainingTimeFormatter.string(until: $0, now: now)
-        } ?? "확인 불가"
-        let fiveHourRemaining = snapshot.fiveHourResetsAt.map {
-            RemainingTimeFormatter.string(until: $0, now: now)
-        } ?? "초기화 확인 중"
-        return "5시간 \(percentText(snapshot.fiveHourRemainingPercent)) (\(fiveHourRemaining)) · 주간 \(percentText(snapshot.weeklyRemainingPercent)) (\(weeklyRemaining))"
+        return "\(copy.fiveHourLimit) \(percentText(snapshot.fiveHourRemainingPercent)) (\(resetTime(for: snapshot.fiveHourResetsAt))) · \(copy.weeklyLimit) \(percentText(snapshot.weeklyRemainingPercent)) (\(resetTime(for: snapshot.weeklyResetsAt)))"
     }
 
-    var fiveHourDetail: String {
-        guard let snapshot else { return "확인할 수 없음" }
-        let percent = percentText(snapshot.fiveHourRemainingPercent)
-        guard let resetDate = snapshot.fiveHourResetsAt else {
-            return "\(percent) 남음 · 초기화 시각 확인 불가"
-        }
-        return "\(percent) 남음 · \(RemainingTimeFormatter.string(until: resetDate, now: now)) 뒤 초기화"
+    var fiveHourPercent: Int? {
+        snapshot?.fiveHourRemainingPercent
     }
 
-    var weeklyDetail: String {
-        guard let snapshot else { return "확인할 수 없음" }
-        let percent = percentText(snapshot.weeklyRemainingPercent)
-        guard let resetDate = snapshot.weeklyResetsAt else {
-            return "\(percent) 남음 · 초기화 시각 확인 불가"
-        }
-        return "\(percent) 남음 · \(RemainingTimeFormatter.string(until: resetDate, now: now)) 뒤 초기화"
+    var weeklyPercent: Int? {
+        snapshot?.weeklyRemainingPercent
+    }
+
+    var fiveHourStatusText: String {
+        limitStatus(percent: fiveHourPercent, resetDate: snapshot?.fiveHourResetsAt)
+    }
+
+    var weeklyStatusText: String {
+        limitStatus(percent: weeklyPercent, resetDate: snapshot?.weeklyResetsAt)
     }
 
     var lastUpdatedText: String {
-        guard let lastUpdatedAt else { return "아직 업데이트되지 않음" }
-        let reason = lastRefreshReason.map { " · \($0)" } ?? ""
-        return "마지막 업데이트: \(lastUpdatedAt.formatted(date: .omitted, time: .shortened))\(reason)"
+        guard let lastUpdatedAt else { return copy.notUpdatedYet }
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        let reason = lastRefreshReason.map { " · \(copy.reason($0))" } ?? ""
+        return "\(copy.lastUpdated): \(formatter.string(from: lastUpdatedAt))\(reason)"
     }
 
-    func refresh(reason: String = "수동") async {
+    var errorMessage: String? {
+        presentedError.map { copy.errorMessage(for: $0) }
+    }
+
+    func progress(for percent: Int?) -> Double {
+        Double(min(100, max(0, percent ?? 0))) / 100
+    }
+
+    func refresh(reason: RefreshReason = .manual) async {
         if isRefreshing {
             pendingRefreshReason = reason
             return
@@ -108,10 +129,10 @@ final class UsageViewModel: ObservableObject {
                 now = Date()
                 lastUpdatedAt = now
                 lastRefreshReason = currentReason
-                errorMessage = nil
+                presentedError = nil
                 save(snapshot: newSnapshot)
             } catch {
-                errorMessage = error.localizedDescription
+                presentedError = presentationError(from: error)
             }
 
             guard let nextReason = pendingRefreshReason else { break }
@@ -123,7 +144,7 @@ final class UsageViewModel: ObservableObject {
 
     func openCodex() {
         guard let url = CodexInstallationLocator.desktopAppURL() else {
-            errorMessage = "Codex 또는 ChatGPT 데스크톱 앱을 찾지 못했습니다."
+            presentedError = .desktopAppNotFound
             return
         }
         NSWorkspace.shared.openApplication(at: url, configuration: .init())
@@ -131,6 +152,35 @@ final class UsageViewModel: ObservableObject {
 
     func quit() {
         NSApplication.shared.terminate(nil)
+    }
+
+    private func limitStatus(percent: Int?, resetDate: Date?) -> String {
+        guard snapshot != nil else { return copy.waitingForUsage }
+        let reset = resetDate.map { copy.resetsIn(localizedRemainingTime(until: $0)) }
+            ?? copy.resetUnavailable
+        return "\(percentText(percent)) · \(reset)"
+    }
+
+    private func resetTime(for resetDate: Date?) -> String {
+        resetDate.map { localizedRemainingTime(until: $0) } ?? copy.unavailable
+    }
+
+    private func localizedRemainingTime(until resetDate: Date) -> String {
+        RemainingTimeFormatter.string(until: resetDate, now: now, language: language)
+    }
+
+    private func presentationError(from error: Error) -> PresentedError {
+        guard let usageError = error as? CodexUsageError else {
+            return .unexpected(error.localizedDescription)
+        }
+
+        return switch usageError {
+        case .executableNotFound: .executableNotFound
+        case .processFailed(let detail): .processFailed(detail)
+        case .serverError(let detail): .serverError(detail)
+        case .missingRateLimits: .missingRateLimits
+        case .timedOut: .timedOut
+        }
     }
 
     private func save(snapshot: UsageSnapshot) {

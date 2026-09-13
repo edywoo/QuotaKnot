@@ -1,21 +1,24 @@
 import Foundation
 
-public enum CodexUsageError: LocalizedError {
+public enum CodexUsageError: LocalizedError, Sendable {
     case executableNotFound
     case processFailed(String)
     case serverError(String)
     case missingRateLimits
+    case timedOut
 
     public var errorDescription: String? {
         switch self {
         case .executableNotFound:
-            return "코덱스 실행 파일을 찾지 못했습니다. Codex 데스크톱 앱 또는 CLI가 설치되어 있는지 확인해 주세요."
+            return "Codex could not be found. Install the Codex desktop app or CLI."
         case .processFailed(let message):
-            return "코덱스 사용량을 읽지 못했습니다: \(message)"
+            return "Codex usage could not be read: \(message)"
         case .serverError(let message):
-            return "코덱스가 오류를 반환했습니다: \(message)"
+            return "Codex returned an error: \(message)"
         case .missingRateLimits:
-            return "응답에 5시간/주간 한도 정보가 없습니다. 코덱스에 로그인되어 있는지 확인해 주세요."
+            return "The response did not include the 5-hour or weekly Codex limits."
+        case .timedOut:
+            return "Codex did not respond within 15 seconds."
         }
     }
 }
@@ -119,7 +122,7 @@ private func fetchSynchronously() throws -> UsageSnapshot {
         }
     }
 
-    throw CodexUsageError.processFailed("15초 안에 응답을 받지 못했습니다.")
+    throw CodexUsageError.timedOut
 }
 
 private func remainingPercent(fromUsedPercent usedPercent: Int) -> Int {

@@ -14,41 +14,10 @@ struct QuotaKnotApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            Text("코덱스 사용 한도")
-                .font(.headline)
-
-            Divider()
-
-            Text("5시간: \(model.fiveHourDetail)")
-            Text("주간: \(model.weeklyDetail)")
-            Text(model.lastUpdatedText)
-            Text("자동 갱신: 질문 전송 · 응답 완료 · 1분마다")
-
-            if let errorMessage = model.errorMessage {
-                Divider()
-                Text(errorMessage)
-            }
-
-            Divider()
-
-            Button(model.isRefreshing ? "새로고침 중…" : "지금 새로고침") {
-                Task { await model.refresh() }
-            }
-            .disabled(model.isRefreshing)
-
-            Button("코덱스 열기") {
-                model.openCodex()
-            }
-
-            Divider()
-
-            Button("종료") {
-                model.quit()
-            }
-            .keyboardShortcut("q")
+            QuotaPanelView(model: model)
         } label: {
-            Text(model.menuBarText)
+            Label(model.menuBarText, systemImage: "gauge")
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 }

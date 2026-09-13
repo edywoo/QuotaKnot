@@ -30,6 +30,7 @@ QuotaKnot is an unofficial macOS menu bar app that shows your remaining Codex 5-
 - Formats countdowns as `6h 23m` under 24 hours and `1d 5h` from 24 hours onward.
 - Refreshes when you send a question and when a response finishes.
 - Refreshes usage every minute and updates countdown text every 30 seconds.
+- Localizes the interface, time units, status text, and errors in English, Korean, Japanese, and Simplified Chinese.
 - Uses your existing Codex desktop app or CLI login—no separate API key required.
 - Reads `account/rateLimits/read` metadata without making a model request, so refreshing does not consume Codex tokens.
 - Builds as a universal app for both Apple Silicon and Intel Macs.
