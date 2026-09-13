@@ -1,0 +1,29 @@
+name: Build macOS app
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify core behavior
+        run: swift run QuotaKnotCoreChecks
+
+      - name: Build universal release archive
+        run: ./package-release.sh
+
+      - name: Upload app archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuotaKnot-macOS
+          path: dist/QuotaKnot-*-macos.zip
+          if-no-files-found: error
