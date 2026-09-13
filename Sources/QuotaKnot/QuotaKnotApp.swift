@@ -16,7 +16,8 @@ struct QuotaKnotApp: App {
         MenuBarExtra {
             QuotaPanelView(model: model)
         } label: {
-            Label(model.menuBarText, systemImage: "gauge")
+            Text(model.menuBarText)
+                .monospacedDigit()
         }
         .menuBarExtraStyle(.window)
     }

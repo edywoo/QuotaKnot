@@ -77,7 +77,7 @@ final class UsageViewModel: ObservableObject {
             return isRefreshing ? copy.refreshing : copy.waitingForUsage
         }
 
-        return "\(copy.fiveHourLimit) \(percentText(snapshot.fiveHourRemainingPercent)) (\(resetTime(for: snapshot.fiveHourResetsAt))) · \(copy.weeklyLimit) \(percentText(snapshot.weeklyRemainingPercent)) (\(resetTime(for: snapshot.weeklyResetsAt)))"
+        return "\(copy.fiveHourMenuLabel) \(percentText(snapshot.fiveHourRemainingPercent)) (\(resetTime(for: snapshot.fiveHourResetsAt))) · \(copy.weeklyMenuLabel) \(percentText(snapshot.weeklyRemainingPercent)) (\(resetTime(for: snapshot.weeklyResetsAt)))"
     }
 
     var fiveHourPercent: Int? {

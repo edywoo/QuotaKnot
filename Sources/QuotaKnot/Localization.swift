@@ -49,6 +49,24 @@ struct LocalizedCopy {
         }
     }
 
+    var fiveHourMenuLabel: String {
+        switch language {
+        case .english: "5h"
+        case .korean: "5시간"
+        case .japanese: "5時間"
+        case .simplifiedChinese: "5小时"
+        }
+    }
+
+    var weeklyMenuLabel: String {
+        switch language {
+        case .english: "Week"
+        case .korean: "주간"
+        case .japanese: "週間"
+        case .simplifiedChinese: "每周"
+        }
+    }
+
     var unavailable: String {
         switch language {
         case .english: "Unavailable"

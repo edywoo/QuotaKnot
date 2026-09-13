@@ -31,6 +31,7 @@ struct QuotaPanelView: View {
                     errorBanner(errorMessage)
                 }
 
+                languageSelector
                 footer
             }
             .padding(20)
@@ -64,12 +65,10 @@ struct QuotaPanelView: View {
                     .controlSize(.small)
                     .tint(.quotaCyan)
             }
-
-            languageMenu
         }
     }
 
-    private var languageMenu: some View {
+    private var languageSelector: some View {
         Menu {
             ForEach(AppLanguage.allCases, id: \.self) { language in
                 Button {
@@ -83,15 +82,24 @@ struct QuotaPanelView: View {
                 }
             }
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "globe")
+            HStack(spacing: 8) {
+                Label(model.copy.languageLabel, systemImage: "globe")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.quotaPrimaryText)
+
+                Spacer(minLength: 12)
+
                 Text(model.language.nativeName)
-                    .lineLimit(1)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.quotaSecondaryText)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.quotaSecondaryText)
             }
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(Color.quotaPrimaryText)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
             .overlay {
                 RoundedRectangle(cornerRadius: 9)
@@ -99,7 +107,7 @@ struct QuotaPanelView: View {
             }
         }
         .menuStyle(.borderlessButton)
-        .fixedSize()
+        .frame(maxWidth: .infinity)
         .help(model.copy.languageLabel)
     }
 
