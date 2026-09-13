@@ -110,6 +110,7 @@ struct QuotaPanelView: View {
             }
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .foregroundColor(.white)
         .tint(.white)
