@@ -116,6 +116,13 @@ struct QuotaPanelView: View {
         .tint(.white)
         .frame(maxWidth: .infinity)
         .help(model.copy.languageLabel)
+        .onHover { isHovering in
+            if isHovering {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
     }
 
     private var limitsCard: some View {
