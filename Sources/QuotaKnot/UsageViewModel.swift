@@ -12,21 +12,25 @@ final class UsageViewModel: ObservableObject {
     @Published private(set) var isRefreshing = false
 
     private let client = CodexUsageClient()
-    private var countdownTimer: Timer?
-    private var refreshTimer: Timer?
+    private var countdownTask: Task<Void, Never>?
+    private var refreshTask: Task<Void, Never>?
     private var activityMonitor: CodexSessionActivityMonitor?
     private var pendingRefreshReason: String?
     private let cacheKey = "lastUsageSnapshot"
 
     init() {
         loadCachedSnapshot()
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        countdownTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { return }
                 self?.now = Date()
             }
         }
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        refreshTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                guard !Task.isCancelled else { return }
                 await self?.refresh(reason: "1분 주기")
             }
         }
@@ -35,7 +39,7 @@ final class UsageViewModel: ObservableObject {
             case .questionSent: "질문 전송"
             case .responseCompleted: "응답 완료"
             }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 await self?.refresh(reason: reason)
             }
         }
@@ -46,8 +50,8 @@ final class UsageViewModel: ObservableObject {
     }
 
     deinit {
-        countdownTimer?.invalidate()
-        refreshTimer?.invalidate()
+        countdownTask?.cancel()
+        refreshTask?.cancel()
         activityMonitor?.stop()
     }
 
